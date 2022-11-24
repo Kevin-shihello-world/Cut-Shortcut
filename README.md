@@ -1,8 +1,9 @@
-# Cut-Shortcut
+# Cut-Shortcut (Codes in this repository are maintaned so it would work properly)
 
 ##![](https://github.com/cszhangzhen/HGP-SL/blob/master/fig/model.png)
 
-This is a PyTorch implementation of the Cut-Shortcut algorithm, which
+This is a PyTorch implementation of the Cut-Shortcut algorithm
+Cut-shortcut: I consided GNN and other model may use wrong shortcut instead of really learned a good representation, so I add some random-projected target information to a projected matrix in my model and minimize the similarity between the output and the model without target information.My experiment shows it works and it is possible to adopt this
 
 ## Requirements
 * python3.6
