@@ -8,13 +8,13 @@ import torch.nn.functional as F
 from torch import nn as nn
 from models import Model
 from torch.utils.data import random_split
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--seed', type=int, default=777, help='random seed')
-parser.add_argument('--batch_size', type=int, default=3, help='batch size')##512
+parser.add_argument('--batch_size', type=int, default=128, help='batch size')##512
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.001, help='weight decay')
 parser.add_argument('--nhid', type=int, default=128, help='hidden size')
@@ -46,6 +46,7 @@ import torch
 from torch_geometric.data import InMemoryDataset, download_url
 from torch_geometric.io import read_planetoid_data
 
+
 ###假设原数据被以tensor形式保存为.npy格式
 ##tensor to txt:
 ##import scipy.io as io
@@ -76,7 +77,7 @@ def read_myds_data(i):
 
     x = feats['net']['conv1.lin.weight'].t().type(torch.long)
     #x = x.cuda
-    print(feats['net']['conv1.lin.weight'].t().shape[0])
+    #print(feats['net']['conv1.lin.weight'].t().shape[0])
     for i_1 in range(0, feats['net']['conv1.lin.weight'].t().shape[0]):
         ##for here feats[name_0].shape[1] would always be the same as feats[name_2].shape[1] I deal with this 2 in one for loop
         list_1.append(h + i_1)
@@ -189,9 +190,12 @@ def train():
     best_epoch = 0
 
     t = time.time()
+    model.load_state_dict(torch.load('/HGP-SL/test__/1.pth'))
     model.train()
     i_1 = 0
     i_count = 0####
+    #cos_ = F.cosine_similarity(dim=0)##, eps=1e-6)
+    #torch.save(model.state_dict(),'HGP-SL/modelinicial/1.pth')
     for epoch in range(args.epochs):
         loss_train = 0.0
         correct = 0
@@ -200,11 +204,39 @@ def train():
         h = 0
         
         for i, data in enumerate(train_loader):
+            batch_num = data.y.shape[0]
             optimizer.zero_grad()
+            a = torch.randn(1)
             data = data.to(args.device)
-            data = data.to(args.device)
+            radidx = torch.reshape(torch.ones(batch_num), [1,batch_num])
+            
+            for j in range(0, data.y.shape[0]):
+                if radidx.shape[0] == 1:
+                    radidx_ = torch.count_nonzero(F.relu(j*torch.ones(data.batch.shape).cuda() - data.batch) )
+
+
+                else:
+                    radidx__ = torch.count_nonzero(F.relu(j*torch.ones(data.batch.shape).cuda() - data.batch) )
+                    #item_ = radidx.shape[0] - 1
+                    radidx_ = radidx__ - max #radidx[item_][0].item()
+                    begin = max
+                    max = radidx__
+                if radidx_ > 100: #
+                    a = a+1
+                    if radidx.shape[0] == 1:
+                        ###val = [float(i), radidx_]
+                        begin = 0
+                        radidx = torch.reshape(torch.Tensor([float(j), radidx_, begin]), [1,3])
+                        max = radidx_
+
+                    else:
+                        radidx_ = torch.reshape(torch.Tensor([float(j), radidx_, begin]), [1,3])
+                        radidx = torch.cat((radidx, radidx_), dim = 0)
+                    #j = j+1
+            ###
+            
             ###count radidx here:
-            n_1 = torch.nonzero(F.relu(torch.ones(data.batch.shape).cuda() - data.batch) ).shape[0]
+            '''n_1 = torch.nonzero(F.relu(torch.ones(data.batch.shape).cuda() - data.batch) ).shape[0]
             n_2_ = torch.nonzero(F.relu(2 * torch.ones(data.batch.shape).cuda() - data.batch) ).shape[0]
             n_2 = n_2_ - n_1
             n_3_ = data.batch.shape[0] 
@@ -219,38 +251,74 @@ def train():
             if n_3 < 10:
                 ridxuder5 = True
                 #print('wrong')
+            #ridxuder5 = True
             if ridxuder5 == False:
                 radidx_0 = torch.reshape(torch.randint(0, n_1 - 1, (5, ) ), [1,5])
                 radidx_1 = torch.reshape(torch.randint(n_1, n_2_ - 1, (5, ) ), [1,5])
                 radidx_2 = torch.reshape(torch.randint(n_2_, n_3_ - 1, (5, ) ), [1,5])
                 radidx = torch.cat((radidx_0, radidx_1, radidx_2), dim = 0)
                 ###count radt and radb here
-                radt = torch.randn(128)
-                radb = torch.randn(128)            
+                radt = torch.randn(batch_num)
+                radb = torch.randn(batch_num)            
                 ###count label here
                 label = torch.randint(0,3,(3,)).cuda()
-                #print(label[0])
+                #print(label[0])'''
+            
                 ###
             
                 ##print(data.validate())
-                out_1 = model(data,radt = radt, radb = radb, radidx = radidx, label = label)
-                out = model(data)
-                out_2 = model(data, if_ = 0.75)
-                #, rad = None, radidx = None, label = None
+                
+            radt = torch.randn(128)
+            radb = torch.randn(128)  
+            label = data.y
+            if epoch < 2: 
+                out_,out, out_t = model(data)
                 #with torch.no_grad():
-                 #   out_1 = out_
+                 #   out_ = out
+
+                loss = F.nll_loss(out, data.y)#- cos_
+
             else:
+                #if epoch > 50:
+                out_1, out_1_ = model(data, if_ = 1,radt = radt, radb = radb, radidx = radidx, label = label)
+                r_length = data.y.shape[0]
+                radm = torch.randint(0,5,(r_length,)).cuda()
+                out_2 = model(data, if_ = 1,radt = radt, radb = radb, radidx = radidx, label = radm)[1]
+                out_, out, out_t = model(data)
+                with torch.no_grad():
+                    out__ = out_
+                    out_t_ = out_t
+                cosneg = F.cosine_similarity(out_1_.view(-1), out_t_.view(-1), dim = 0)
+                cosadd = F.cosine_similarity(out_1.view(-1), out__.view(-1), dim = 0)
+                loss = F.nll_loss(out, data.y) - cosneg + cosadd
+                '''else:
+                    #out_1 = model(data, if_ = 0.10)
+                    out = model(data)
+
+                    loss = F.nll_loss(out, data.y)'''
+                    
+                
+                                    
+                
+                #out = model(data)
+                #out_2 = model(data, if_ = 1.00)
+                #, rad = None, radidx = None, label = None
+                #triplet_loss = nn.TripletMarginLoss(margin=1.0, p=2)
+                
+
+                #loss = F.nll_loss(out, data.y) + cos_#(out_1.view(-1), out.view(-1)) #+ 0.5*F.nll_loss(out_1, data.y)##,weight = loss_)
+            '''else:
                 h = h+1
                 out_1 = model(data, if_ = 0.10)
                 out = model(data)
-                out_2 = model(data, if_ = 0.75)   
-                
+                out_2 = model(data, if_ = 0.75)   '''
+            #loss = F.nll_loss(out, data.y)# + triplet_loss(out_1, out, out_2) #+ 0.5*F.nll_loss(out_1, data.y)##,weight = loss_)
                     
                 
             
             #loss = loss_.cuda()
-            triplet_loss = nn.TripletMarginLoss(margin=1.0, p=2)
-            loss = F.nll_loss(out, data.y) + triplet_loss(out_1, out, out_2) #+ 0.5*F.nll_loss(out_1, data.y)##,weight = loss_)
+            
+            
             loss.backward()
             '''
             if i == 1:
@@ -296,7 +364,7 @@ def train():
             loss_train += loss.item()
             pred = out.max(dim=1)[1]
             correct += pred.eq(data.y).sum().item()
-        print("i:",i)####
+        ##print("i:",i)####
         acc_train = correct / len(train_loader.dataset)
         acc_val, loss_val = compute_test(val_loader)
         print('Epoch: {:04d}'.format(epoch + 1), 'loss_train: {:.6f}'.format(loss_train),
@@ -320,14 +388,15 @@ def train():
             epoch_nb = int(f.split('.')[0])
             if epoch_nb < best_epoch:
                 os.remove(f)
-
+    
+    #torch.save(model.state_dict(), '/HGP-SL/test__/1.pth')
     files = glob.glob('*.pth')
     for f in files:
         epoch_nb = int(f.split('.')[0])
         if epoch_nb > best_epoch:
             os.remove(f)
     print('Optimization Finished! Total time elapsed: {:.6f}'.format(time.time() - t))
-
+    
     return best_epoch
 
 
@@ -336,9 +405,9 @@ def compute_test(loader):
     correct = 0.0
     loss_test = 0.0
     for data in loader:
-        
+        #print('data.y:', data.y)
         data = data.to(args.device)
-        out = model(data)
+        out_, out, _ = model(data)
         pred = out.max(dim=1)[1]
         correct += pred.eq(data.y).sum().item()
         loss_test += F.nll_loss(out, data.y).item()
@@ -356,4 +425,5 @@ if __name__ == '__main__':
     
     test_acc, test_loss = compute_test(test_loader)
     print('Test set results, loss = {:.6f}, accuracy = {:.6f}'.format(test_loss, test_acc))
+
 
